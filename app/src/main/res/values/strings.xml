@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">App Tracker</string>
+    <string name="notification_channel_name">Usage Alerts</string>
+    <string name="notification_channel_description">Notifications for app usage reminders</string>
+    <string name="service_channel_name">Tracking Service</string>
+    <string name="service_channel_description">Shows when app usage tracking is active</string>
+</resources>

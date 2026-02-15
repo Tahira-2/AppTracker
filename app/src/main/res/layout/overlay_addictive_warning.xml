@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/overlay_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#B3000000">
+
+    <LinearLayout
+        android:id="@+id/card_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:layout_marginStart="24dp"
+        android:layout_marginEnd="24dp"
+        android:background="@drawable/overlay_card_bg"
+        android:elevation="8dp"
+        android:orientation="vertical"
+        android:padding="24dp">
+
+        <!-- Warning Icon -->
+        <ImageView
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:layout_gravity="center_horizontal"
+            android:src="@android:drawable/ic_dialog_alert"
+            android:contentDescription="Warning"
+            android:tint="#FF6B6B" />
+
+        <!-- Title -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:gravity="center"
+            android:text="Addictive App Warning"
+            android:textColor="#1C1B1F"
+            android:textSize="20sp"
+            android:textStyle="bold" />
+
+        <!-- App Name -->
+        <TextView
+            android:id="@+id/tv_app_name"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:gravity="center"
+            android:textColor="#FF6B6B"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <!-- Warning Info Card -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:background="@drawable/overlay_info_bg"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:text="This app is marked as addictive"
+                android:textColor="#FF6B6B"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tv_warning_message"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:gravity="center"
+                android:text="Think twice before spending time here. Do you really need to use this app right now?"
+                android:textColor="#49454F"
+                android:textSize="14sp" />
+
+        </LinearLayout>
+
+        <!-- Message -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:gravity="center"
+            android:text="Consider doing something more productive instead."
+            android:textColor="#49454F"
+            android:textSize="14sp" />
+
+        <!-- Buttons -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:orientation="horizontal">
+
+            <!-- Close App Button -->
+            <Button
+                android:id="@+id/btn_close_app"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_weight="1"
+                android:layout_marginEnd="6dp"
+                android:background="@drawable/overlay_btn_filled"
+                android:text="Close App"
+                android:textColor="#FFFFFF"
+                android:textSize="14sp"
+                android:textAllCaps="false"
+                android:clickable="true"
+                android:focusable="true" />
+
+            <!-- Continue Button -->
+            <Button
+                android:id="@+id/btn_continue"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_weight="1"
+                android:layout_marginStart="6dp"
+                android:background="@drawable/overlay_btn_outline"
+                android:text="Continue Anyway"
+                android:textColor="#79747E"
+                android:textSize="14sp"
+                android:textAllCaps="false"
+                android:clickable="true"
+                android:focusable="true" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</FrameLayout>

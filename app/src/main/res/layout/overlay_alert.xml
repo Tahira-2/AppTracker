@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/overlay_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#B3000000">
+
+    <LinearLayout
+        android:id="@+id/card_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:layout_marginStart="24dp"
+        android:layout_marginEnd="24dp"
+        android:background="@drawable/overlay_card_bg"
+        android:elevation="8dp"
+        android:orientation="vertical"
+        android:padding="24dp">
+
+        <!-- Warning Icon -->
+        <ImageView
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:layout_gravity="center_horizontal"
+            android:src="@android:drawable/ic_dialog_alert"
+            android:contentDescription="Warning"
+            android:tint="#FF6B6B" />
+
+        <!-- Title -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:gravity="center"
+            android:text="Time Limit Reached"
+            android:textColor="#1C1B1F"
+            android:textSize="20sp"
+            android:textStyle="bold" />
+
+        <!-- App Name -->
+        <TextView
+            android:id="@+id/tv_app_name"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:gravity="center"
+            android:textColor="#6750A4"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <!-- Usage Info Card -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:background="@drawable/overlay_info_bg"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:text="You've been using this app for"
+                android:textColor="#49454F"
+                android:textSize="14sp" />
+
+            <TextView
+                android:id="@+id/tv_usage_time"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:gravity="center"
+                android:textColor="#FF6B6B"
+                android:textSize="28sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tv_time_limit"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:gravity="center"
+                android:textColor="#49454F"
+                android:textSize="12sp" />
+
+        </LinearLayout>
+
+        <!-- Message -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:gravity="center"
+            android:text="Take a break! Your eyes and mind will thank you."
+            android:textColor="#49454F"
+            android:textSize="14sp" />
+
+        <!-- Buttons -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:orientation="horizontal">
+
+            <!-- Ignore Button -->
+            <Button
+                android:id="@+id/btn_ignore"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_weight="1"
+                android:layout_marginEnd="6dp"
+                android:background="@drawable/overlay_btn_outline"
+                android:text="Ignore"
+                android:textColor="#6750A4"
+                android:textSize="14sp"
+                android:textAllCaps="false"
+                android:clickable="true"
+                android:focusable="true" />
+
+            <!-- Add Time Button -->
+            <Button
+                android:id="@+id/btn_add_time"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_weight="1"
+                android:layout_marginStart="6dp"
+                android:background="@drawable/overlay_btn_filled"
+                android:text="Add 5 min"
+                android:textColor="#FFFFFF"
+                android:textSize="14sp"
+                android:textAllCaps="false"
+                android:clickable="true"
+                android:focusable="true" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</FrameLayout>

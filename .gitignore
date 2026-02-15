@@ -1,0 +1,29 @@
+# Build artifacts
+build/
+*.apk
+*.aar
+*.ap_
+
+# Gradle
+.gradle/
+!gradle-wrapper.jar
+
+# Local configuration
+local.properties
+
+# IDE - Android Studio / IntelliJ
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Signing
+*.jks
+*.keystore
+
+# Google Services (if added later)
+google-services.json
