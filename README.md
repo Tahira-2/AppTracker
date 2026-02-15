@@ -13,17 +13,17 @@ An Android application that monitors app usage patterns, detects addictive behav
 - Configurable per-app time limits (1-60 minutes)
 - Fullscreen overlay warnings when limits are exceeded
 - "Add Time" option with escalating increments (5 min, 10 min, 15 min...)
-- Vibration alerts for immediate attention
 - Auto-dismiss after 60 seconds as a safety net
 
 ### Addiction Detection
 Analyzes 7-day usage patterns and flags apps as "addictive" based on four criteria:
-- **High daily usage**: >2 hours per day
+- **High daily usage**: >1 hour per day
 - **Frequent opens**: >20 times per day
 - **Compulsive checking**: >10 short sessions (<2 min) per day
 - **Late-night usage**: >30 minutes between 11 PM - 6 AM
 
 An app is marked addictive if it meets 2 or more criteria (score 0-4).
+Note- User selected app as "Work" won't be marked as Addictive
 
 ### Dashboard
 - Total screen time for the day
