@@ -118,7 +118,7 @@ Data is retained for 30 days and automatically cleaned up.
 6. Addictive apps trigger special warnings with multi-step confirmation for exclusion
 
 
-**##How To Run**
+## How To Run
 
 1. Clone the repository in your computer
 2. Open in Android Studio
