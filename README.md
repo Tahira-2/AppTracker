@@ -116,3 +116,12 @@ Data is retained for 30 days and automatically cleaned up.
 4. When a time limit is exceeded, a **fullscreen overlay alert** is shown with options to ignore or add time
 5. The **addiction detector** runs on a 7-day rolling window to score apps
 6. Addictive apps trigger special warnings with multi-step confirmation for exclusion
+
+
+**##How To Run**
+
+1. Clone the repository in your computer
+2. Open in Android Studio
+3. Enable Developer mode on your phone
+4. Connect your android to the computer (USB/Wireless debugging)
+5. Click the "Run" button in Android Studio
