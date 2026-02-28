@@ -70,11 +70,13 @@ class AlertOverlayManager @Inject constructor(
     private fun createOverlayParams(): WindowManager.LayoutParams {
         return WindowManager.LayoutParams(
             WindowManager.LayoutParams.MATCH_PARENT,
-            WindowManager.LayoutParams.MATCH_PARENT,
+            WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-            WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
             PixelFormat.TRANSLUCENT
-        )
+        ).apply {
+            gravity = android.view.Gravity.CENTER
+        }
     }
 
     fun showAlert(
@@ -125,6 +127,12 @@ class AlertOverlayManager @Inject constructor(
                 overlayView = view
                 isShowing = true
                 currentOverlayPackage = packageName
+
+                // Only update notification time AFTER overlay is confirmed visible
+                // This ensures retries on next poll if addView failed
+                CoroutineScope(Dispatchers.IO).launch {
+                    repository.updateLastNotificationTime(packageName, System.currentTimeMillis())
+                }
 
                 // Auto-dismiss after 60 seconds as safety net
                 autoDismissRunnable = Runnable { removeOverlayView() }
@@ -212,23 +220,22 @@ class AlertOverlayManager @Inject constructor(
      * This avoids race conditions from multiple handler.post calls.
      */
     private fun removeOverlayView() {
-        try {
-            // Cancel any pending auto-dismiss
-            autoDismissRunnable?.let { handler.removeCallbacks(it) }
-            autoDismissRunnable = null
+        // Cancel any pending auto-dismiss
+        autoDismissRunnable?.let { handler.removeCallbacks(it) }
+        autoDismissRunnable = null
 
-            overlayView?.let { view ->
-                if (view.isAttachedToWindow) {
-                    windowManager.removeView(view)
-                }
+        overlayView?.let { view ->
+            try {
+                windowManager.removeView(view)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to remove overlay view", e)
             }
-            overlayView = null
-            isShowing = false
-            currentOverlayPackage = null
-            Log.d(TAG, "Overlay dismissed")
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to dismiss overlay", e)
         }
+        // Always clean up state, even if removeView threw
+        overlayView = null
+        isShowing = false
+        currentOverlayPackage = null
+        Log.d(TAG, "Overlay dismissed")
     }
 
     private fun handleIgnore(packageName: String) {

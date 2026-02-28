@@ -88,6 +88,9 @@ class UsageTrackingService : Service() {
     // Snooze tracking
     private val snoozedApps = mutableMapOf<String, Long>()
 
+    // Tracks when we last saw a confirmed event for the current app
+    private var lastConfirmedActiveTime: Long = 0
+
     private val dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
 
     private val trackingRunnable = object : Runnable {
@@ -100,7 +103,7 @@ class UsageTrackingService : Service() {
     override fun onCreate() {
         super.onCreate()
         Log.d(TAG, "Service onCreate")
-        usageStatsManager = getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
+        usageStatsManager = getSystemService(Context.USAGE_STATS_SERVICE) as? UsageStatsManager
         packageManager = applicationContext.packageManager
     }
 
@@ -162,8 +165,11 @@ class UsageTrackingService : Service() {
 
             if (graceDuration >= Constants.GRACE_PERIOD_MS) {
                 Log.d(TAG, "Grace period expired (${graceDuration}ms), saving session for $currentAppName")
+                val closedApp = currentApp
                 saveCurrentSession()
                 resetTrackingState()
+                // Reset warning timer so next session starts fresh
+                closedApp?.let { resetWarningState(it) }
             } else {
                 Log.d(TAG, "In grace period: ${graceDuration}ms / ${Constants.GRACE_PERIOD_MS}ms for $currentAppName")
             }
@@ -176,23 +182,27 @@ class UsageTrackingService : Service() {
             isInGracePeriod = false
         }
 
-        // Add elapsed time
-        val elapsedSeconds = (currentTime - lastActiveTime) / 1000
-        continuousUsageSeconds += elapsedSeconds
+        // Calculate total continuous usage from session start time directly
+        // (avoids accumulated integer division rounding errors that lose ~12 min per hour)
+        val previousUsageSeconds = continuousUsageSeconds
+        continuousUsageSeconds = (currentTime - sessionStartTime) / 1000
+        val elapsedSeconds = continuousUsageSeconds - previousUsageSeconds
         lastActiveTime = currentTime
 
         val usageMinutes = continuousUsageSeconds / 60
         Log.d(TAG, "Tracking: $currentAppName, +${elapsedSeconds}s, Total: ${continuousUsageSeconds}s (${usageMinutes}min)")
 
         // Record usage to database
-        serviceScope.launch {
-            currentApp?.let { pkg ->
-                repository.recordUsageTime(
-                    packageName = pkg,
-                    appName = currentAppName,
-                    seconds = elapsedSeconds,
-                    isLateNight = addictionDetector.isLateNightTime()
-                )
+        if (elapsedSeconds > 0) {
+            serviceScope.launch {
+                currentApp?.let { pkg ->
+                    repository.recordUsageTime(
+                        packageName = pkg,
+                        appName = currentAppName,
+                        seconds = elapsedSeconds,
+                        isLateNight = addictionDetector.isLateNightTime()
+                    )
+                }
             }
         }
 
@@ -205,8 +215,11 @@ class UsageTrackingService : Service() {
         if (currentApp != null) {
             Log.d(TAG, "Switching from $currentAppName to ${getAppName(newApp)}")
             // Auto-dismiss overlay if user left the app it was shown for
-            alertOverlayManager.dismissIfShowingForPackage(currentApp!!)
+            val previousApp = currentApp!!
+            alertOverlayManager.dismissIfShowingForPackage(previousApp)
             saveCurrentSession()
+            // Reset warning timer so next session starts fresh
+            resetWarningState(previousApp)
         }
 
         // Start new session
@@ -215,6 +228,7 @@ class UsageTrackingService : Service() {
         sessionStartTime = currentTime
         continuousUsageSeconds = 0
         lastActiveTime = currentTime
+        lastConfirmedActiveTime = currentTime
         isInGracePeriod = false
 
         Log.d(TAG, "Started tracking: $currentAppName ($newApp)")
@@ -274,8 +288,17 @@ class UsageTrackingService : Service() {
         sessionStartTime = 0
         continuousUsageSeconds = 0
         lastActiveTime = 0
+        lastConfirmedActiveTime = 0
         isInGracePeriod = false
         gracePeriodStartTime = 0
+    }
+
+    private fun resetWarningState(packageName: String) {
+        Log.d(TAG, "Resetting warning state for $packageName")
+        serviceScope.launch {
+            repository.updateAddedTime(packageName, 0, 5)
+            repository.updateLastNotificationTime(packageName, 0)
+        }
     }
 
     private fun checkAndNotify() {
@@ -316,7 +339,20 @@ class UsageTrackingService : Service() {
 
             // Calculate effective time limit (base limit + added time from "Add Time" button)
             val baseTimeLimitMinutes = settings.timeLimitMinutes
-            val addedTimeMinutes = settings.addedTimeMinutes
+            var addedTimeMinutes = settings.addedTimeMinutes
+
+            // Daily reset: clear accumulated added time from previous days
+            if (settings.lastNotificationTime > 0 && addedTimeMinutes > 0) {
+                val lastNotificationDate = java.time.Instant.ofEpochMilli(settings.lastNotificationTime)
+                    .atZone(java.time.ZoneId.systemDefault())
+                    .toLocalDate()
+                if (lastNotificationDate != LocalDate.now()) {
+                    Log.d(TAG, "New day - resetting addedTime for $currentAppName (was ${addedTimeMinutes}m)")
+                    repository.updateAddedTime(app, 0, 5)
+                    addedTimeMinutes = 0
+                }
+            }
+
             val effectiveTimeLimitMinutes = baseTimeLimitMinutes + addedTimeMinutes
 
             Log.d(TAG, "Notification check: $currentAppName - ${usageMinutes}min used / ${effectiveTimeLimitMinutes}min limit (base: $baseTimeLimitMinutes, added: $addedTimeMinutes)")
@@ -333,6 +369,8 @@ class UsageTrackingService : Service() {
                     Log.d(TAG, ">>> SHOWING OVERLAY ALERT for $currentAppName ($usageMinutes min) <<<")
 
                     // Show overlay popup directly over the current app
+                    // Note: lastNotificationTime is updated inside showAlert only after
+                    // the overlay is confirmed visible. This ensures retries if addView fails.
                     alertOverlayManager.showAlert(
                         packageName = app,
                         appName = currentAppName,
@@ -340,9 +378,6 @@ class UsageTrackingService : Service() {
                         timeLimit = effectiveTimeLimitMinutes,
                         addTimeIncrement = settings.currentAddTimeIncrement
                     )
-
-                    // Update lastNotificationTime to prevent spam
-                    repository.updateLastNotificationTime(app, System.currentTimeMillis())
                 } else {
                     Log.d(TAG, "Notification on cooldown, ${(notificationInterval - timeSinceLastNotification)/1000}s remaining")
                 }
@@ -362,9 +397,9 @@ class UsageTrackingService : Service() {
     private fun getActivelyUsedApp(): String? {
         val currentTime = System.currentTimeMillis()
 
-        // Query events from the last 2 minutes for reliable state detection
+        // Query events from the last 5 minutes for reliable state detection
         val endTime = currentTime
-        val startTime = currentTime - 120000 // 2 minutes
+        val startTime = currentTime - 300000 // 5 minutes
 
         val usageEvents = usageStatsManager?.queryEvents(startTime, endTime)
 
@@ -423,19 +458,49 @@ class UsageTrackingService : Service() {
             ?.key
 
         if (activeApp != null) {
+            // Ghost activity check: if switching to a different app, verify the
+            // current app was actually paused first. A real app switch always
+            // pauses the current activity. If it wasn't paused, the "new" app
+            // is likely a ghost background activity (e.g., transparent activity
+            // for push notifications, content providers, etc.)
+            if (currentApp != null && activeApp != currentApp) {
+                val currentAppState = appStates[currentApp]
+                if (currentAppState == null || currentAppState.isResumed) {
+                    Log.d(TAG, "Ghost activity detected: $activeApp resumed but $currentApp not paused, ignoring")
+                    lastConfirmedActiveTime = currentTime
+                    return currentApp
+                }
+            }
+
             Log.d(TAG, "Active app detected: $activeApp")
+            lastConfirmedActiveTime = currentTime
             return activeApp
         }
 
-        // If no active app found in events, but we're currently tracking an app,
-        // assume it's still active (no pause event means still in foreground)
+        // Fallback: no apps resumed in event window, but we're tracking an app.
+        // Continue tracking only if:
+        // 1. The current app was NOT explicitly paused in this window
+        // 2. We haven't been relying on this fallback for too long (max 30 min)
         if (currentApp != null && !isIgnoredPackage(currentApp!!)) {
-            // Check if the current app has been explicitly paused
             val currentAppState = appStates[currentApp]
-            if (currentAppState == null || currentAppState.isResumed) {
-                Log.d(TAG, "Continuing to track current app: $currentApp (no pause detected)")
-                return currentApp
+
+            // If current app was explicitly paused, it's no longer in foreground
+            if (currentAppState != null && !currentAppState.isResumed) {
+                Log.d(TAG, "Current app $currentApp was paused")
+                return null
             }
+
+            // Check fallback timeout: don't track indefinitely without event confirmation
+            val timeSinceConfirmed = currentTime - lastConfirmedActiveTime
+            if (lastConfirmedActiveTime > 0 && timeSinceConfirmed > Constants.MAX_TRACKING_WITHOUT_EVENTS_MS) {
+                Log.d(TAG, "Fallback timeout: no events for $currentApp in ${timeSinceConfirmed / 1000}s, stopping tracking")
+                return null
+            }
+
+            // App is still active - refresh confirmed time to prevent false timeout during long sessions
+            lastConfirmedActiveTime = currentTime
+            Log.d(TAG, "Continuing to track current app: $currentApp (no pause detected)")
+            return currentApp
         }
 
         Log.d(TAG, "No active app detected")

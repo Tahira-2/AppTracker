@@ -2,16 +2,14 @@
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/overlay_root"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="#B3000000">
+    android:layout_height="wrap_content">
 
     <LinearLayout
         android:id="@+id/card_container"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_gravity="center"
-        android:layout_marginStart="24dp"
-        android:layout_marginEnd="24dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
         android:background="@drawable/overlay_card_bg"
         android:elevation="8dp"
         android:orientation="vertical"

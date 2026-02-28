@@ -3,7 +3,8 @@ package com.alertsystem.apptracker.util
 object Constants {
     // Tracking intervals
     const val TRACKING_INTERVAL_MS = 5000L // 5 seconds
-    const val GRACE_PERIOD_MS = 30000L // 30 seconds grace period
+    const val GRACE_PERIOD_MS = 15000L // 15 seconds grace period
+    const val MAX_TRACKING_WITHOUT_EVENTS_MS = 30 * 60 * 1000L // 30 minutes max without event confirmation
 
     // Default settings
     const val DEFAULT_TIME_LIMIT_MINUTES = 1 // 1 minute for testing - change to 15 for production
