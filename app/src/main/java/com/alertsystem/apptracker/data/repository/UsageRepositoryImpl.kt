@@ -71,8 +71,8 @@ class UsageRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun updateAddictive(packageName: String, isAddictive: Boolean) {
-        appSettingsDao.updateAddictive(packageName, isAddictive)
+    override suspend fun updateAddictive(packageName: String, isAddictive: Boolean, overrideUntil: Long) {
+        appSettingsDao.updateAddictive(packageName, isAddictive, overrideUntil)
     }
 
     override suspend fun updateAddedTime(packageName: String, minutes: Int, increment: Int) {

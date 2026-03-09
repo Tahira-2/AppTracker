@@ -14,6 +14,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -61,40 +62,50 @@ class AppSettingsViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
 
-            repository.getAllAppSettings().collect { settingsList ->
-                val appItems = settingsList.mapNotNull { settings ->
-                    try {
-                        val icon = getAppIcon(settings.packageName)
-                        val metrics = repository.getAddictionMetrics(settings.packageName)
+            // One-time snapshot instead of continuous Flow collection.
+            // This prevents apps from jumping position when settings change.
+            // List re-sorts only when the page is reloaded or app is reopened.
+            val settingsList = repository.getAllAppSettings().first()
 
-                        AppSettingsItem(
-                            packageName = settings.packageName,
-                            appName = settings.appName,
-                            icon = icon,
-                            timeLimitMinutes = settings.timeLimitMinutes,
-                            isExcluded = settings.isExcluded,
-                            exclusionConfirmCount = settings.exclusionConfirmCount,
-                            isAddictive = settings.isAddictive || metrics.isAddictive,
-                            addictionScore = metrics.addictionScore,
-                            isNotificationEnabled = settings.isNotificationEnabled,
-                            unsubscribeConfirmCount = settings.unsubscribeConfirmCount,
-                            isWork = settings.isWork
-                        )
-                    } catch (e: Exception) {
-                        null
-                    }
-                }.sortedWith(
-                    compareByDescending<AppSettingsItem> { it.isNotificationEnabled }
-                        .thenByDescending { it.isAddictive }
-                        .thenBy { it.appName }
-                )
+            val appItems = settingsList.mapNotNull { settings ->
+                try {
+                    val icon = getAppIcon(settings.packageName)
+                    val metrics = repository.getAddictionMetrics(settings.packageName)
 
-                _uiState.value = _uiState.value.copy(
-                    apps = appItems,
-                    isLoading = false
-                )
-            }
+                    AppSettingsItem(
+                        packageName = settings.packageName,
+                        appName = settings.appName,
+                        icon = icon,
+                        timeLimitMinutes = settings.timeLimitMinutes,
+                        isExcluded = settings.isExcluded,
+                        exclusionConfirmCount = settings.exclusionConfirmCount,
+                        isAddictive = if (settings.addictiveOverrideUntil > System.currentTimeMillis()) settings.isAddictive else (settings.isAddictive || metrics.isAddictive),
+                        addictionScore = metrics.addictionScore,
+                        isNotificationEnabled = settings.isNotificationEnabled,
+                        unsubscribeConfirmCount = settings.unsubscribeConfirmCount,
+                        isWork = settings.isWork
+                    )
+                } catch (e: Exception) {
+                    null
+                }
+            }.sortedWith(
+                compareByDescending<AppSettingsItem> { it.isNotificationEnabled }
+                    .thenByDescending { it.isAddictive }
+                    .thenBy { it.appName }
+            )
+
+            _uiState.value = _uiState.value.copy(
+                apps = appItems,
+                isLoading = false
+            )
         }
+    }
+
+    private fun updateAppInPlace(packageName: String, transform: (AppSettingsItem) -> AppSettingsItem) {
+        val updatedApps = _uiState.value.apps.map {
+            if (it.packageName == packageName) transform(it) else it
+        }
+        _uiState.value = _uiState.value.copy(apps = updatedApps)
     }
 
     fun updateSearchQuery(query: String) {
@@ -104,6 +115,7 @@ class AppSettingsViewModel @Inject constructor(
     fun updateTimeLimit(packageName: String, minutes: Int) {
         viewModelScope.launch {
             repository.updateTimeLimit(packageName, minutes)
+            updateAppInPlace(packageName) { it.copy(timeLimitMinutes = minutes) }
         }
     }
 
@@ -112,6 +124,7 @@ class AppSettingsViewModel @Inject constructor(
             // Simply re-enable notifications
             viewModelScope.launch {
                 repository.updateExclusion(app.packageName, false, 0)
+                updateAppInPlace(app.packageName) { it.copy(isExcluded = false) }
             }
         } else {
             // Show exclusion dialog
@@ -141,6 +154,7 @@ class AppSettingsViewModel @Inject constructor(
             // All confirmations received, exclude the app
             viewModelScope.launch {
                 repository.updateExclusion(app.packageName, true, currentStep)
+                updateAppInPlace(app.packageName) { it.copy(isExcluded = true) }
             }
             dismissExclusionDialog()
         }
@@ -177,6 +191,7 @@ class AppSettingsViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
             repository.syncInstalledApps()
+            loadApps()
         }
     }
 
@@ -200,6 +215,7 @@ class AppSettingsViewModel @Inject constructor(
                             currentAddTimeIncrement = if (enabled) 5 else settings.currentAddTimeIncrement
                         )
                     )
+                    updateAppInPlace(app.packageName) { it.copy(isNotificationEnabled = enabled) }
                 }
             }
         }
@@ -210,26 +226,13 @@ class AppSettingsViewModel @Inject constructor(
         viewModelScope.launch {
             val settings = repository.getAppSettings(app.packageName)
             if (settings != null) {
-                val newCount = settings.unsubscribeConfirmCount + 1
-                if (newCount >= 3) {
-                    // All confirmations received, disable notifications
-                    repository.saveAppSettings(
-                        settings.copy(
-                            isNotificationEnabled = false,
-                            unsubscribeConfirmCount = 0
-                        )
-                    )
-                    dismissUnsubscribeDialog()
-                } else {
-                    // Increment confirm count
-                    repository.saveAppSettings(
-                        settings.copy(
-                            unsubscribeConfirmCount = newCount
-                        )
-                    )
-                }
+                repository.saveAppSettings(
+                    settings.copy(isNotificationEnabled = false)
+                )
+                updateAppInPlace(app.packageName) { it.copy(isNotificationEnabled = false) }
             }
         }
+        dismissUnsubscribeDialog()
     }
 
     fun dismissUnsubscribeDialog() {
@@ -249,6 +252,7 @@ class AppSettingsViewModel @Inject constructor(
         } else {
             viewModelScope.launch {
                 repository.updateAddictive(app.packageName, isAddictive)
+                updateAppInPlace(app.packageName) { it.copy(isAddictive = isAddictive) }
             }
         }
     }
@@ -256,7 +260,9 @@ class AppSettingsViewModel @Inject constructor(
     fun confirmUnmarkAddictive() {
         val app = _uiState.value.pendingUnmarkApp ?: return
         viewModelScope.launch {
-            repository.updateAddictive(app.packageName, false)
+            val overrideUntil = System.currentTimeMillis() + Constants.ADDICTIVE_OVERRIDE_DURATION_MS
+            repository.updateAddictive(app.packageName, false, overrideUntil = overrideUntil)
+            updateAppInPlace(app.packageName) { it.copy(isAddictive = false) }
         }
         dismissUnmarkAddictiveDialog()
     }
@@ -266,9 +272,13 @@ class AppSettingsViewModel @Inject constructor(
             val settings = repository.getAppSettings(packageName)
             if (settings != null) {
                 repository.saveAppSettings(settings.copy(isWork = isWork))
-                // If marking as work and currently addictive, remove addictive label
                 if (isWork && settings.isAddictive) {
-                    repository.updateAddictive(packageName, false)
+                    // If marking as work and currently addictive, remove addictive label
+                    val overrideUntil = System.currentTimeMillis() + Constants.ADDICTIVE_OVERRIDE_DURATION_MS
+                    repository.updateAddictive(packageName, false, overrideUntil = overrideUntil)
+                    updateAppInPlace(packageName) { it.copy(isWork = true, isAddictive = false) }
+                } else {
+                    updateAppInPlace(packageName) { it.copy(isWork = isWork) }
                 }
             }
         }

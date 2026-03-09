@@ -17,7 +17,7 @@ interface UsageRepository {
     suspend fun updateExclusion(packageName: String, isExcluded: Boolean, confirmCount: Int)
     suspend fun updateLastNotificationTime(packageName: String, time: Long)
     suspend fun updateNotificationEnabled(packageName: String, enabled: Boolean)
-    suspend fun updateAddictive(packageName: String, isAddictive: Boolean)
+    suspend fun updateAddictive(packageName: String, isAddictive: Boolean, overrideUntil: Long = 0)
     suspend fun updateAddedTime(packageName: String, minutes: Int, increment: Int)
     suspend fun updateUnsubscribeConfirmCount(packageName: String, count: Int)
     suspend fun resetAddedTimeForApp(packageName: String)

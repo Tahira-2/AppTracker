@@ -47,8 +47,8 @@ interface AppSettingsDao {
     @Query("UPDATE app_settings SET isNotificationEnabled = :enabled WHERE packageName = :packageName")
     suspend fun updateNotificationEnabled(packageName: String, enabled: Boolean)
 
-    @Query("UPDATE app_settings SET isAddictive = :isAddictive WHERE packageName = :packageName")
-    suspend fun updateAddictive(packageName: String, isAddictive: Boolean)
+    @Query("UPDATE app_settings SET isAddictive = :isAddictive, addictiveOverrideUntil = :overrideUntil WHERE packageName = :packageName")
+    suspend fun updateAddictive(packageName: String, isAddictive: Boolean, overrideUntil: Long = 0)
 
     @Query("UPDATE app_settings SET addedTimeMinutes = :minutes, currentAddTimeIncrement = :increment WHERE packageName = :packageName")
     suspend fun updateAddedTime(packageName: String, minutes: Int, increment: Int)

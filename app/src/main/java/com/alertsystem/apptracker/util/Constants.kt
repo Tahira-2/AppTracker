@@ -34,4 +34,7 @@ object Constants {
 
     // Snooze duration
     const val SNOOZE_DURATION_MINUTES = 5
+
+    // Addictive override duration (3 days in milliseconds)
+    const val ADDICTIVE_OVERRIDE_DURATION_MS = 3L * 24 * 60 * 60 * 1000
 }

@@ -155,8 +155,6 @@ fun AppSettingsScreen(
             // Unsubscribe confirmation dialog for addictive apps
             if (uiState.showUnsubscribeDialog && uiState.pendingUnsubscribeApp != null) {
                 val app = uiState.pendingUnsubscribeApp!!
-                val confirmCount = app.unsubscribeConfirmCount + 1
-                val remainingConfirms = 3 - confirmCount
 
                 AlertDialog(
                     onDismissRequest = { viewModel.dismissUnsubscribeDialog() },
@@ -170,29 +168,15 @@ fun AppSettingsScreen(
                     },
                     title = {
                         Text(
-                            text = "Addictive App Warning",
+                            text = "Disable Reminders?",
                             textAlign = TextAlign.Center
                         )
                     },
                     text = {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text(
-                                text = "${app.appName} is marked as addictive.",
-                                textAlign = TextAlign.Center
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = if (remainingConfirms > 0) {
-                                    "Are you sure you want to disable reminders?\n\nYou need to confirm $remainingConfirms more time${if (remainingConfirms > 1) "s" else ""} to disable."
-                                } else {
-                                    "This is your final confirmation.\nReminders will be disabled after this."
-                                },
-                                textAlign = TextAlign.Center,
-                                color = if (remainingConfirms == 0) AddictiveRed else MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+                        Text(
+                            text = "${app.appName} is marked as addictive. Are you sure you want to disable reminders for this app?",
+                            textAlign = TextAlign.Center
+                        )
                     },
                     confirmButton = {
                         Button(
@@ -201,7 +185,7 @@ fun AppSettingsScreen(
                                 containerColor = AddictiveRed
                             )
                         ) {
-                            Text(if (remainingConfirms > 0) "Confirm ($confirmCount/3)" else "Disable Reminders")
+                            Text("Disable Reminders")
                         }
                     },
                     dismissButton = {
@@ -344,16 +328,22 @@ private fun AppSettingsCard(
                 }
 
                 // Notification toggle (main toggle)
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.padding(bottom = 4.dp)
+                ) {
                     Text(
                         text = "Notify",
                         style = MaterialTheme.typography.labelSmall
                     )
+                    Spacer(modifier = Modifier.height(4.dp))
                     Switch(
                         checked = app.isNotificationEnabled,
                         onCheckedChange = { onNotificationToggle(it) },
+                        modifier = Modifier.height(24.dp),
                         colors = SwitchDefaults.colors(
                             checkedThumbColor = MaterialTheme.colorScheme.primary,
+                            checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
                             uncheckedThumbColor = MaterialTheme.colorScheme.outline
                         )
                     )

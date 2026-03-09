@@ -309,8 +309,9 @@ class UsageTrackingService : Service() {
             val settings = repository.getAppSettings(app)
 
             // Check for addictive status (Testing: >1 hour usage today)
-            // Skip auto-marking for work apps
-            if (settings?.isWork != true) {
+            // Skip auto-marking for work apps and apps with active override (3-day cooldown)
+            val overrideActive = (settings?.addictiveOverrideUntil ?: 0) > System.currentTimeMillis()
+            if (settings?.isWork != true && !overrideActive) {
                 val shouldMarkAddictive = addictionDetector.checkAndMarkAddictiveIfNeeded(app)
                 if (shouldMarkAddictive && settings?.isAddictive != true) {
                     Log.d(TAG, "Marking $currentAppName as addictive (>1 hour usage today)")
